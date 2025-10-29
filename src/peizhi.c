@@ -42,13 +42,19 @@ void peizhi_chushi(){
 
 //从配置文件加载配置
 bool peizhi_jiazai(const char* wjm_peizhi){
-    FILE* file = fopen(wjm_peizhi, "r");
-    if (file == NULL){
+    FILE* wj = fopen(wjm_peizhi, "r");
+    if (wj == NULL){
         return false; //无法打开文件
     }
 
-    char line[256]; //缓冲区，用于存储读取的每一行配置
-    while (fgets(line,sizeof(line),file != NULL)){
-        
+    char duqu[256]; //缓冲区，用于存储读取的每一行配置
+    while (fgets(duqu,sizeof(duqu),wj != NULL)){
+        //跳过空行
+        if(duqu[0] == '\n' || duqu[0] == '#'){
+            continue; //跳过注释行
+        }
+
+        char key[64]; //用于存储配置键
+        char value[128]; //用于存储配置值
     }
 }

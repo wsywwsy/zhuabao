@@ -56,5 +56,12 @@ bool peizhi_jiazai(const char* wjm_peizhi){
 
         char key[64]; //用于存储配置键
         char value[128]; //用于存储配置值
+
+        //解析键值对
+        if(sccanf(duqu, "%63[^=]=%127[^n]",key,value) == 2){
+            //去除value前后的空白空格
+            char* trimmed_value =value;
+            while (*trimmed_value == '') trimmed_value++;
+        }
     }
 }

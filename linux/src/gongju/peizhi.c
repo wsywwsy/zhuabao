@@ -1,4 +1,4 @@
-#include "peizhi.h" //包含配置头文件
+#include "../../include/gongju/peizhi.h" //包含配置头文件
 #include <stdio.h>  //标准输入输出
 #include <stdlib.h> //用于atoi等函数
 #include <string.h> //用于字符串处理

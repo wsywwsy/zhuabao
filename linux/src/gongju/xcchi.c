@@ -22,6 +22,8 @@ typedef struct{
 //任务调度功能
 void *gongzuo(void *arg){
     xcchi *pool = (xcchi *)arg; //arg实际上是一个线程管理器，这步是告诉*pool使用在线程管理器被创建时候带有数值的xcchi结构体
+                                //理解：创建了一个叫gongzuo的线程函数，他的参数是一个void类型的指针叫arg，这个指针实际上指向一个xcchi结构体，
+                                //所以我们把这个void指针强制转换成xcchi类型的指针，然后赋值给pool变量，这样我们就可以通过pool变量访问线程池的各种属性和方法了
     while(1){
         pthread_mutex_lock(&pool->suo); //上锁保护临界资源
         while(pool->tou == pool->wei && !pool->shutdown) //检查队列是否为空和线程池是否关闭

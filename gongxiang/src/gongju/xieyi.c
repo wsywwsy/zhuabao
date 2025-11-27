@@ -17,7 +17,7 @@
 
 //定义协力类型枚举
 typedef enum {
-    xy_yitaiwang = 0, //以太网协议
+    xy_ytw = 0, //以太网协议
     xy_ip,          //IP协议
     xy_ipv6,        //IPv6协议
     xy_arp,         //ARP协议
@@ -34,7 +34,7 @@ typedef struct{
     uint8_t mb_mac[6]; //目的MAC地址
     uint8_t ydz_mac[6]; //源MAC地址
     uint16_t lx; //以太网类型
-}ytw_tou; //以太网帧头
+}YTW_tou; //以太网帧头
 #pragma pack(pop)
 
 //定义IP数据头结构 - 使用1字节对齐确保准确解析
@@ -49,7 +49,7 @@ typedef struct{
     uint16_t jyh; //头部校验和
     uint32_t ydz_ip; //源IP地址
     uint32_t mb_ip; //目的IP地址
-} IPtou; //IP数据头
+} IP_tou; //IP数据头
 #pragma pack(pop)
 
 #pragma pack(push,1)
@@ -63,7 +63,7 @@ typedef struct{
     uint16_t ck; //接收窗口
     uint16_t jyh; //校验和
     uint16_t jj_zhizhen; //紧急指针
-}TCPtou; //TCP数据头
+}TCP_tou; //TCP数据头
 #pragma pack(pop) 
 
 #pragma pack(push,1)
@@ -72,28 +72,28 @@ typedef struct{
     uint16_t mb_duankou; //目的端口
     uint16_t cd; //长度
     uint16_t jyh; //校验和
-}UDPtou; //UDP数据头
+}UDP_tou; //UDP数据头
 #pragma pack(pop)
 
 //定义协议解析结果结构
 typedef struct{
-    XieYiLeiXing leixing; //协议类型
+    xy_leixing leixing; //协议类型
     char xy_ming[32]; //协议名称
     char yuan_dizhi[64]; //源地址
-    char mu_dizhi[64]; //目的地址
-    uint16_t y_duankou; //源端口
+    char md_dizhi[64]; //目的地址
+    uint16_t yuan_duankou; //源端口
     uint16_t mb_duankou; //目的端口
     uint32_t sj_changdu; //数据长度
     char zy[256]; //摘要信息
     time_t sjc; //时间戳
-}XieyiXinxi;
+}Xieyi_Xinxi;
 
 //模块内部状态结构 - 只在源文件种使用
 typedef struct{
     int csh; //初始化状态
     uint32_t jx_jishu; //解析数据包计数器
     uint32_t cw_jishu; //错误数据包计数器
-}XieyiNeibu;
+}Xieyi_Neibu;
 
 //模块全局上下文
 static XieyiNeibu xy_shuju = {0};
@@ -123,5 +123,67 @@ int xy_chushihua(void){
 //清理协议解析模块资源,无返回
 void xy_qingli(void){
     //检查是否已初始化
-    if(!xy_shuju.csh)
+    if(!xy_shuju.csh){
+        printf("[协议模块]未初始化，无需清理\n");
+        return;
+    }
+    //打印统计信息
+    printf("[协议模块] 清理资源，统计：解析=%u,错误=%u\n",
+        xy_shuju.jx_jishu,xy_shuju.cw_jishu);
+
+    //清理上下文
+    memset(&xy_shuju,0,sizeof(xy_shuju));
+
+    printf("[协议模块] 协议解析模块清理完成\n");
 }
+
+/**
+ * 解析以太网数据
+ * 参数：sj - 原始数据指针，cd - 数据长度，xx - 输出解析结果
+ * 返回值：成功返回0，失败返回-1
+ */
+
+ int xieyi_jiexi_ytw(const uint8_t *sj, size_t cd, XieYiXinxi *xx)
+ {
+    //参数有效性检查
+    if (!sj){
+        printf("[协议模块] 错误：以太网数据指针为空\n");
+        xy_shuju.cw_jishu++;
+        return -1;
+    }
+
+    if(!xx){
+        printf("[协议模块] 错误：输出信息指针为空\n");
+        xy_shuju.cw_jishu++;
+        return -1;
+    }
+
+    //检查数据长度是否足够
+    if (cd < sizeof(YiTaiWang_Tou)){
+        printf("[协议模块] 错误：以太网数据长度不足\n");
+            sizeof((ytw_tou),cd);
+        xy_shuju.cw_jishu++;
+        return -1;
+    }
+
+    //将数据转换为以太网头结构
+    const YiTaiWang_Tou *ytw_tou = (const YiTaiWang_Tou *)sj;
+
+    //清空输出结果，确保没有残留
+    memset(xx,0,siezof(Xieyi_xinxi));
+
+    //设置基本协议信息
+    xx -> leixing = xy_ytw;
+    strncpy(xx->xy_ming,"ETHERNET", sizeof(xx->xy_ming) - 1);
+    xx -> sjc = time(NULL); //设置时间戳
+
+    //格式化mac地址
+    char yuan_mac[18] = {0}; //MAC地址格式为XX:XX:XX:XX:XX:XX + null终止符
+    char mb_mac[18] = {0};
+    geshihua_mac_dz(ytw_tou->ydz_mac,yuan_mac,sizeof(yuan_mac));
+    geshihua_mac_dz(ytw_tou->mb_mac,mb_mac,sizeof(mb_mac));
+
+    //设置地址信息
+    strncpy(xx->yuan_dizhi,yuan_mac,sizeof(xx->yuan_dizhi)-1);
+    strncpy(xx->md_dizhi,mb_mac,sizeof(xx->mu_dizhi)-1);
+ }

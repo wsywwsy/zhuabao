@@ -143,7 +143,7 @@ void xy_qingli(void){
  * 返回值：成功返回0，失败返回-1
  */
 
- int xieyi_jiexi_ytw(const uint8_t *sj, size_t cd, XieYiXinxi *xx)
+ int jiexi_ytw(const uint8_t *sj, size_t cd, XieYiXinxi *xx)
  {
     //参数有效性检查
     if (!sj){
@@ -186,4 +186,26 @@ void xy_qingli(void){
     //设置地址信息
     strncpy(xx->yuan_dizhi,yuan_mac,sizeof(xx->yuan_dizhi)-1);
     strncpy(xx->md_dizhi,mb_mac,sizeof(xx->mu_dizhi)-1);
+
+    //计算载荷长度
+    xx->zh_changdu = cd - sizeof(ytw_tou);
+
+    //更新统计信息
+    xy_shuju.jx_jishu++;
+
+    return 0; //成功
  }
+
+ /*
+ *解析ip数据包
+ *参数：sj - IP数据包指针，cd - 数据长度,xx - 输出解析结果
+ *返回值：成功返回0，失败返回-1
+ */
+int jiexi_ip(const uint8_t *sj,uint32_t cd,Xieyi_Xinxi *xx){
+    //检查参数有效性
+    if(!sj || !xx){
+        printf("[协议解析模块]错误：IP解析参数为空\n");
+        xy_shuju.cw_jishu++;
+    }
+}
+ 

@@ -26,7 +26,7 @@ typedef enum {
     xy_tcp,         //TCP协议
     xy_udp,         //UDP协议
     xy_icmp,         //ICMP协议
-} xy_leixing;
+} XY_leixing;
 
 //定义以太网帧头结构 - 使用1字节对齐确保准确解析
 #pragma pack(push,1)
@@ -44,7 +44,7 @@ typedef struct{
     uint8_t fw_leixing; //服务类型
     uint16_t zcd; //总长度
     uint16_t bj_pianpianyi; //标识和片偏移
-    uint8_t sj; //生存时间
+    uint8_t sc_shijian; //生存时间
     uint8_t xy; //协议
     uint16_t jyh; //头部校验和
     uint32_t ydz_ip; //源IP地址
@@ -86,23 +86,23 @@ typedef struct{
     uint32_t sj_changdu; //数据长度
     char zy[256]; //摘要信息
     time_t sjc; //时间戳
-}Xieyi_Xinxi;
+}XY_xinxi;
 
 //模块内部状态结构 - 只在源文件种使用
 typedef struct{
     int csh; //初始化状态
     uint32_t jx_jishu; //解析数据包计数器
     uint32_t cw_jishu; //错误数据包计数器
-}Xieyi_Neibu;
+}XY_neibu;
 
 //模块全局上下文
-static XieyiNeibu xy_shuju = {0};
+static XY_neibu xy_shuju = {0};
 
 //内部辅助函数声明 - 这些函数不暴露给外部
 static const char* hq_xy_ming(uint8_t xy); //根据协议号获取协议名称
 static void gsh_mac_dizhi(const uint8_t *mac, char *hcq, size_t hc_changdu); //格式化MAC地址，规定缓冲区和缓冲区大小
 static void gsh_ip_dizhi(uint32_t ip, char *hcq, size_t hc_changdu); //格式化IP地址，规定缓冲区和缓冲区大小
-static int yz_sjb_changdu(uint32_t yq_changdu, uint32_t sj_changdu); //验证数据包长度,定义预期长度和实际长度
+static int yz_sjb_changdu(uint32_t yq_changdu, uint32_t sj_changdu,const char *xy_ming); //验证数据包长度,定义预期长度和实际长度
 
 //初始化协议解析模块，返回值：成功返回0失败返回-1
 int xy_chushihua(void){
@@ -143,7 +143,7 @@ void xy_qingli(void){
  * 返回值：成功返回0，失败返回-1
  */
 
- int jiexi_ytw(const uint8_t *sj, size_t cd, XieYiXinxi *xx)
+ int jiexi_ytw(const uint8_t *sj, size_t cd, XY_xinxi *xx)
  {
     //参数有效性检查
     if (!sj){
@@ -159,18 +159,17 @@ void xy_qingli(void){
     }
 
     //检查数据长度是否足够
-    if (cd < sizeof(YiTaiWang_Tou)){
+    if (cd < sizeof(YTW_tou)){
         printf("[协议模块] 错误：以太网数据长度不足\n");
-            sizeof((ytw_tou),cd);
         xy_shuju.cw_jishu++;
         return -1;
     }
 
     //将数据转换为以太网头结构
-    const YiTaiWang_Tou *ytw_tou = (const YiTaiWang_Tou *)sj;
+    const YTW_tou *ytw_tou = (const YTW_tou *)sj;
 
     //清空输出结果，确保没有残留
-    memset(xx,0,siezof(Xieyi_xinxi));
+    memset(xx,0,sizeof(XY_xinxi));
 
     //设置基本协议信息
     xx -> leixing = xy_ytw;
@@ -180,15 +179,15 @@ void xy_qingli(void){
     //格式化mac地址
     char yuan_mac[18] = {0}; //MAC地址格式为XX:XX:XX:XX:XX:XX + null终止符
     char mb_mac[18] = {0};
-    geshihua_mac_dz(ytw_tou->ydz_mac,yuan_mac,sizeof(yuan_mac));
-    geshihua_mac_dz(ytw_tou->mb_mac,mb_mac,sizeof(mb_mac));
+    gsh_mac_dizhi(ytw_tou->ydz_mac,yuan_mac,sizeof(yuan_mac));
+    gsh_mac_dizhi(ytw_tou->mb_mac,mb_mac,sizeof(mb_mac));
 
     //设置地址信息
     strncpy(xx->yuan_dizhi,yuan_mac,sizeof(xx->yuan_dizhi)-1);
-    strncpy(xx->md_dizhi,mb_mac,sizeof(xx->mu_dizhi)-1);
+    strncpy(xx->md_dizhi,mb_mac,sizeof(xx->md_dizhi)-1);
 
     //计算载荷长度
-    xx->zh_changdu = cd - sizeof(ytw_tou);
+    xx->sj_changdu = cd - sizeof(YTW_tou);
 
     //更新统计信息
     xy_shuju.jx_jishu++;
@@ -201,11 +200,92 @@ void xy_qingli(void){
  *参数：sj - IP数据包指针，cd - 数据长度,xx - 输出解析结果
  *返回值：成功返回0，失败返回-1
  */
-int jiexi_ip(const uint8_t *sj,uint32_t cd,Xieyi_Xinxi *xx){
+int jiexi_ip(const uint8_t *sj,uint32_t cd,XY_xinxi *xx){
     //检查参数有效性
     if(!sj || !xx){
-        printf("[协议解析模块]错误：IP解析参数为空\n");
+        printf("[协议解析模块]错误:IP解析参数为空\n");
         xy_shuju.cw_jishu++;
+        return -1;
     }
+
+    //长度检查
+    if (cd < sizeof(IP_tou)){
+        printf("[协议模块] 错误: IP数据包长度不足\n");
+        xy_shuju.cw_jishu++;
+        return -1;
+    }
+
+    const IP_tou *ip_tou = (const IP_tou *)sj;
+    
+    //检查IP版本，只支持IPv4：bb_touchang高4位为版本号
+    uint8_t banben = (ip_tou->bb_touchang >> 4) & 0x0F; //头长度单位为4字节
+    if (banben != 4){
+        printf("[协议模块] 错误: 不支持IPv%d数据包\n", banben);
+        xy_shuju.cw_jishu++;
+        return -1;
+    }
+    //计算ip头长度（单位：32位字 * 4 = 字节数）低四位为长度
+    // 原始值：0x45 = 0100 0101
+    // 掩码：  0x0F = 0000 1111
+    // 按位与：       0000 0101 = 0x05      
+    uint8_t tc_changdu = (ip_tou->bb_touchang & 0x0F) * 4;
+    if(tc_changdu < sizeof(IP_tou)){
+        printf("[协议模块] 错误: IP头长度不足\n");
+        xy_shuju.cw_jishu++;
+        return -1;
+    }
+
+    //验证数据包长度
+    if(yz_sjb_changdu(tc_changdu,cd,"IP") != 0){
+        xy_shuju.cw_jishu++;
+        return -1;
+    }
+
+    //设置协议信息
+    xx->leixing = xy_ip;
+    const char *xy_ming = hq_xy_ming(ip_tou->xy);
+    strncpy(xx->xy_ming,xy_ming,sizeof(xx->xy_ming)-1);
+
+    //格式化IP地址
+    char yuan_ip_str[INET_ADDRSTRLEN] = {0};
+    char mb_ip_str[INET_ADDRSTRLEN] = {0};
+    gsh_ip_dizhi(ip_tou->ydz_ip,yuan_ip_str,sizeof(yuan_ip_str));
+    gsh_ip_dizhi(ip_tou->mb_ip,mb_ip_str,sizeof(mb_ip_str));
+
+    //设置地址信息
+    strncpy(xx->yuan_dizhi,yuan_ip_str,sizeof(xx->yuan_dizhi)-1);
+    strncpy(xx->md_dizhi,mb_ip_str,sizeof(xx->md_dizhi)-1);
+
+    //创建摘要信息
+    snprintf(xx->zy,sizeof(xx->zy) - 1,
+            "IP包: %s -> %s, 协议: %s, 总长: %d字节",
+            yuan_ip_str,mb_ip_str,xy_ming,ntohs(ip_tou->zcd));
+
+    //计算载荷长度(总长度 - 头长度)
+    xx->sj_changdu = ntohl(ip_tou->zcd) - tc_changdu;
+    xy_shuju.jx_jishu++;
+    return 0;
 }
- 
+
+/*
+* 解析TCP数据段
+* 参数：sj - TCP数据指针，cd - 数据长度,xx - 输出解析结果
+* 返回值：成功返回0，失败返回-1
+*/
+ int jx_tcp(const uint8_t *sj,uint32_t changdu,XY_xinxi *xx){
+    // 参数和长度检查
+    if (!sj || !xx || changdu < sizeof(TCP_tou)){
+        printf("[协议模块] 错误: TCP解析参数无效或长度不足\n");
+        xy_shuju.cw_jishu++;
+        return -1;
+    }
+
+    const TCP_tou *tcp_tou = (const TCP_tou *)sj;
+
+    //设置协议信息
+    xx->leixing = xy_tcp;
+    strncpy(xx->xy_ming,"TCP",sizeof(xx->xy_ming)-1);
+
+    //设置端口信息
+    xx->yuan_duankou = ntohs(tcp_tou->y_duankou);
+ }
